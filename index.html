@@ -779,6 +779,88 @@ footer { background: var(--black); border-top: 1px solid rgba(201,168,76,0.15); 
   /* Feature card padding */
   .feature-card { padding: 28px 20px; }
 }
+
+/* =====================================================
+   TOUCH DEVICE OVERRIDES
+   Fires on ALL touch screens regardless of viewport —
+   this handles "Desktop Mode" on phones too.
+   ===================================================== */
+@media (pointer: coarse) {
+
+  /* 1. Kill custom cursor — no mouse on touch screens */
+  body { cursor: auto !important; }
+  .cursor, .cursor-follower { display: none !important; }
+
+  /* 2. Hero image — keep subjects in frame */
+  .hero-slide { background-position: center 20% !important; }
+
+  /* 3. About image — show from top, no clipping */
+  .about-img-main {
+    position: relative !important;
+    width: 100% !important;
+    height: 320px !important;
+    object-fit: cover !important;
+    object-position: center top !important;
+    top: auto !important;
+    left: auto !important;
+    display: block !important;
+  }
+  .about-img-secondary, .about-badge { display: none !important; }
+  .about-images { height: auto !important; }
+
+  /* 4. Gallery hover overlays — always visible on touch */
+  .gallery-item-overlay { opacity: 1 !important; }
+  .insta-hover { opacity: 1 !important; background: rgba(0,0,0,0.35) !important; }
+
+  /* 5. Showcase overlay — always show on touch */
+  .showcase-item .showcase-overlay { opacity: 1 !important; }
+
+  /* 6. Hero height — use small viewport height so buttons don't fall under browser chrome */
+  .hero { height: 100svh !important; min-height: 600px !important; }
+
+  /* 7. Before/After slider — bigger handle for finger dragging */
+  .ba-handle { width: 52px !important; height: 52px !important; font-size: 1.3rem !important; }
+
+  /* 8. Lightbox — bigger tap targets for prev/next */
+  .lightbox-prev, .lightbox-next {
+    width: 52px !important; height: 52px !important;
+    font-size: 1.3rem !important;
+  }
+  .lightbox-close { width: 44px !important; height: 44px !important; top: 16px !important; right: 16px !important; }
+
+  /* 9. Nav links hover underline — remove (no hover on touch) */
+  .nav-links a::after { display: none !important; }
+
+  /* 10. Video card play button — always visible */
+  .play-btn { opacity: 1 !important; transform: scale(1) !important; }
+
+  /* 11. Package/feature cards — remove hover lift effect */
+  .package-card:hover, .feature-card:hover, .testimonial-card:hover {
+    transform: none !important;
+  }
+
+  /* 12. Smooth scroll — keep but ensure fast response */
+  html { scroll-behavior: smooth; }
+
+  /* 13. WhatsApp float — always reachable */
+  .wa-float { bottom: 20px !important; right: 16px !important; }
+
+  /* 14. Tap highlight — remove default grey flash on touch */
+  * { -webkit-tap-highlight-color: transparent; }
+
+  /* 15. Buttons — ensure large enough tap target (44px min) */
+  .btn-primary, .btn-outline, .btn-whatsapp, .btn-sm {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tab-btn { min-height: 44px; }
+  .nav-links a { min-height: 44px; display: inline-flex; align-items: center; }
+
+  /* 16. Social icons — bigger tap area */
+  .social-icon { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+}
 </style>
 </head>
 <body>
@@ -1493,25 +1575,28 @@ footer { background: var(--black); border-top: 1px solid rgba(201,168,76,0.15); 
 </footer>
 
 <script>
-// Custom Cursor
+// Custom Cursor — skip on touch devices
+const isTouch = window.matchMedia('(pointer: coarse)').matches;
 const cursor = document.getElementById('cursor');
 const follower = document.getElementById('cursor-follower');
-let mouseX=0,mouseY=0,followerX=0,followerY=0;
-document.addEventListener('mousemove',e=>{
-  mouseX=e.clientX; mouseY=e.clientY;
-  cursor.style.left=mouseX+'px'; cursor.style.top=mouseY+'px';
-});
-function animateFollower(){
-  followerX+=(mouseX-followerX)*0.12;
-  followerY+=(mouseY-followerY)*0.12;
-  follower.style.left=followerX+'px'; follower.style.top=followerY+'px';
-  requestAnimationFrame(animateFollower);
+if (!isTouch && cursor && follower) {
+  let mouseX=0,mouseY=0,followerX=0,followerY=0;
+  document.addEventListener('mousemove',e=>{
+    mouseX=e.clientX; mouseY=e.clientY;
+    cursor.style.left=mouseX+'px'; cursor.style.top=mouseY+'px';
+  });
+  function animateFollower(){
+    followerX+=(mouseX-followerX)*0.12;
+    followerY+=(mouseY-followerY)*0.12;
+    follower.style.left=followerX+'px'; follower.style.top=followerY+'px';
+    requestAnimationFrame(animateFollower);
+  }
+  animateFollower();
+  document.querySelectorAll('a,button,.gallery-item,.video-card,.showcase-item').forEach(el=>{
+    el.addEventListener('mouseenter',()=>cursor.classList.add('expand'));
+    el.addEventListener('mouseleave',()=>cursor.classList.remove('expand'));
+  });
 }
-animateFollower();
-document.querySelectorAll('a,button,.gallery-item,.video-card,.showcase-item').forEach(el=>{
-  el.addEventListener('mouseenter',()=>cursor.classList.add('expand'));
-  el.addEventListener('mouseleave',()=>cursor.classList.remove('expand'));
-});
 
 // Navbar scroll
 const navbar = document.getElementById('navbar');
@@ -1528,6 +1613,22 @@ function nextSlide(){
   slides[currentSlide].classList.add('active');
 }
 setInterval(nextSlide,5000);
+
+// Hero slider — touch swipe support
+const heroSlider = document.getElementById('heroSlider');
+if (heroSlider) {
+  let tsX=0;
+  heroSlider.addEventListener('touchstart',e=>{tsX=e.touches[0].clientX;},{passive:true});
+  heroSlider.addEventListener('touchend',e=>{
+    const diff=tsX-e.changedTouches[0].clientX;
+    if(Math.abs(diff)>40){diff>0?nextSlide():prevSlide();}
+  });
+}
+function prevSlide(){
+  slides[currentSlide].classList.remove('active');
+  currentSlide=(currentSlide-1+slides.length)%slides.length;
+  slides[currentSlide].classList.add('active');
+}
 
 // Mobile menu
 const hamburger=document.getElementById('hamburger');
